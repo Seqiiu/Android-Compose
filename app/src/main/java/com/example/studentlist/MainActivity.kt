@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.*
@@ -39,6 +41,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,17 +52,34 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             StudentListTheme {
-                StudentListScreen()
+                AppNavigation()
             }
         }
     }
 }
 
-data class Student(val name: String, val favorite: Boolean)
 
 @Composable
-fun StudentListScreen() {
-    var students by remember { mutableStateOf((1..20).map { Student("Pies $it",false) }.toMutableList()) }
+fun AppNavigation() {
+    val navController = rememberNavController()
+    val students by remember { mutableStateOf((1..20).map { Student("Pies $it","Rasa $it",false) }.toMutableList()) }
+
+
+    NavHost(navController = navController, startDestination = "home") {
+        composable("home") { StudentListScreen(navController,students) }
+        composable("details") { DetailsScreen(students[0]) }
+    }
+}
+
+data class Student(val name: String, val rasa:String ,val favorite: Boolean)
+
+
+
+@Composable
+fun StudentListScreen(
+    navController: NavController,
+    students:  MutableList<Student>
+) {
     var searchQuery by remember { mutableStateOf(TextFieldValue()) }
 
     Column(modifier = Modifier
@@ -68,7 +91,7 @@ fun StudentListScreen() {
             onSearchChange = { searchQuery = TextFieldValue(it) },
             onAdd = {
                 if (it.isNotBlank()) {
-                    students.add(Student(name = it,favorite = false))
+                    students.add(Student(name = it, rasa = it, favorite = false))
                 }
             }
         )
@@ -104,17 +127,18 @@ fun StudentListScreen() {
                     StudentItem(
                         student = student,
                         onDelete = {
-                            students = students.filter { it != student }.toMutableList()
+                            students.filter { it != student }.toMutableList()
                         },
                         onFavorite = {
-                            students = students.map { s ->
+                            students.map { s ->
                                 if (s.name == student.name) {
                                     s.copy(favorite = !student.favorite)
                                 } else {
                                     s
                                 }
                             }.toMutableList()
-                        }
+                        },
+                        navController
                     )
                 }
             }
@@ -123,17 +147,18 @@ fun StudentListScreen() {
                     StudentItem(
                         student = student,
                         onDelete = {
-                            students = students.filter { it != student }.toMutableList()
+                            students.filter { it != student }.toMutableList()
                         },
                         onFavorite = {
-                            students = students.map { s ->
+                            students.map { s ->
                                 if (s.name == student.name) {
                                     s.copy(favorite = !student.favorite)
                                 } else {
                                     s
                                 }
                             }.toMutableList()
-                        }
+                        },
+                        navController
                     )
                 }
             }
@@ -179,22 +204,12 @@ fun SearchAndAddBar(
     }
 }
 
-
 @Composable
-fun StudentItem(student: Student, onDelete: () -> Unit, onFavorite: () -> Unit) {
-    Column {
-
-        Divider(
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
-            thickness = 1.dp,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+fun DetailsScreen(student: Student) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         val gradientBrush = Brush.linearGradient(
             colors = listOf(Color.Red, Color.Blue),
@@ -208,14 +223,59 @@ fun StudentItem(student: Student, onDelete: () -> Unit, onFavorite: () -> Unit) 
             tint = Color.White,
             modifier = Modifier
                 .background(gradientBrush)
-                .size(40.dp)
+                .size(100.dp)
                 .padding(2.dp)
-
         )
-        Text(
-            modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
-            text = student.name,
-            style = MaterialTheme.typography.labelLarge)
+        Text(student.name)
+        Text(student.rasa)
+
+    }
+}
+
+
+
+@Composable
+fun StudentItem(
+    student: Student, onDelete: () -> Unit,
+    onFavorite: () -> Unit,
+    navController: NavController) {
+    Column {
+        Divider(
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+            thickness = 1.dp,
+            modifier = Modifier.padding(horizontal = 16.dp))
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clickable {
+                navController.navigate("details")
+            },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val gradientBrush = Brush.linearGradient(
+                colors = listOf(Color.Red, Color.Blue),
+                start = Offset(0f, 0f),
+                end = Offset(100f, 100f)
+            )
+
+            Icon(
+                imageVector = Icons.Default.Done,
+                contentDescription = "Search icon",
+                tint = Color.White,
+                modifier = Modifier
+                    .background(gradientBrush)
+                    .size(40.dp)
+                    .padding(2.dp)
+            )
+            Text(
+                modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
+                text = student.name,
+                style = MaterialTheme.typography.labelLarge
+            )
+
 
         if (student.favorite == true)
         {
@@ -243,6 +303,6 @@ fun StudentItem(student: Student, onDelete: () -> Unit, onFavorite: () -> Unit) 
             )
         }
     }
-    }
 }
+
 
